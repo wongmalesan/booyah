@@ -9,24 +9,29 @@
 </head>
 
 <body>
+    <div>
+        <input type="text" id="txt_ytUri" name="txt_ytUri" placeholder="Enter YouTube video ID" value="caMBwGJERWo"/>
+        <input type="button" value="OK" onClick="onGetURL()"/>
+        <input type="button" value="Play" onClick="playAllWithDelay()"/>
+    </div>
     <div id="player1"></div>
     <div id="player2"></div>
     <div id="player3"></div>
     <div id="player4"></div>
     <div id="player5"></div>
     <script>
-        var source_id = "caMBwGJERWo";
+        var player1, player2, player3, player4, player5;
+        
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         var firstScriptTag = document.getElementsByTagName('script')[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-        var player1, player2, player3, player4, player5;
         function onYouTubeIframeAPIReady() {
             player1 = new YT.Player('player1', {
                 height: '293',
                 width: '520',
-                videoId: source_id,
+                videoId: '',
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
@@ -34,7 +39,7 @@
             player2 = new YT.Player('player2', {
                 height: '293',
                 width: '520',
-                videoId: source_id,
+                videoId: '',
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
@@ -42,7 +47,7 @@
             player3 = new YT.Player('player3', {
                 height: '293',
                 width: '520',
-                videoId: source_id,
+                videoId: '',
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
@@ -50,7 +55,7 @@
             player4 = new YT.Player('player4', {
                 height: '293',
                 width: '520',
-                videoId: source_id,
+                videoId: '',
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
@@ -58,7 +63,7 @@
             player5 = new YT.Player('player5', {
                 height: '293',
                 width: '520',
-                videoId: source_id,
+                videoId: '',
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
@@ -104,6 +109,23 @@
                     player4.stopVideo();
                     break;
             }
+        }
+
+        function onGetURL(){
+            var videoId = document.getElementById('txt_ytUri').value;
+            player1.loadVideoById(videoId);
+            player2.loadVideoById(videoId);
+            player3.loadVideoById(videoId);
+            player4.loadVideoById(videoId);
+            player5.loadVideoById(videoId);
+        }
+
+        function playAllWithDelay() {
+            setTimeout(function() { player1.playVideo(); }, 0);
+            setTimeout(function() { player2.playVideo(); }, 30000); // 30 seconds delay
+            setTimeout(function() { player3.playVideo(); }, 60000); // 60 seconds delay
+            setTimeout(function() { player4.playVideo(); }, 90000); // 90 seconds delay
+            setTimeout(function() { player5.playVideo(); }, 120000); // 120 seconds delay
         }
 
         $(document).ready(function () {

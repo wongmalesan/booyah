@@ -125,12 +125,21 @@
             player5.cueVideoById(videoId);
         }
 
+        function getRandomDelay(minMinutes, maxMinutes) {
+            // Konversi menit ke milidetik
+            const minMs = minMinutes * 60 * 1000;
+            const maxMs = maxMinutes * 60 * 1000;
+            
+            // Hasilkan nilai acak dalam rentang milidetik yang diinginkan
+            return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+        }
+
         function playAllWithDelay() {
             setTimeout(function() { player1.playVideo(); }, 0);
-            setTimeout(function() { player2.playVideo(); }, 30000); // 30 seconds delay
-            setTimeout(function() { player3.playVideo(); }, 60000); // 60 seconds delay
-            setTimeout(function() { player4.playVideo(); }, 90000); // 90 seconds delay
-            setTimeout(function() { player5.playVideo(); }, 120000); // 120 seconds delay
+            setTimeout(function() { player2.playVideo(); }, getRandomDelay(5, 8));
+            setTimeout(function() { player3.playVideo(); }, getRandomDelay(9, 12)); 
+            setTimeout(function() { player4.playVideo(); }, getRandomDelay(13, 15)); 
+            setTimeout(function() { player5.playVideo(); }, getRandomDelay(16, 20)); 
         }
 
         $(document).ready(function () {

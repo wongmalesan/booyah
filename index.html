@@ -118,11 +118,11 @@
 
         function onGetURL(){
             var videoId = document.getElementById('txt_ytUri').value;
-            player1.loadVideoById(videoId);
-            player2.loadVideoById(videoId);
-            player3.loadVideoById(videoId);
-            player4.loadVideoById(videoId);
-            player5.loadVideoById(videoId);
+            player1.cueVideoById(videoId);
+            player2.cueVideoById(videoId);
+            player3.cueVideoById(videoId);
+            player4.cueVideoById(videoId);
+            player5.cueVideoById(videoId);
         }
 
         function playAllWithDelay() {

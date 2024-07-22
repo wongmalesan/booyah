@@ -156,7 +156,7 @@
         function onGenerateURL() {
 
             function getAdditionalMinuts(min, max) {
-                return Math.floor(Math.random() * (max - min + 1)) + min;
+                return Math.floor(Math.random() * (max - min + 1) + min) * 60;
             }
             
             var videoId = document.getElementById('txt_ytUri').value;

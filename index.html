@@ -34,7 +34,8 @@
                 videoId: '',
                 playerVars: { 'autoplay': 0 },
                 events: {
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onReady': onPlayerReady
                 }
             });
             player2 = new YT.Player('player2', {
@@ -43,7 +44,8 @@
                 videoId: '',
                 playerVars: { 'autoplay': 0 },
                 events: {
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onReady': onPlayerReady
                 }
             });
             player3 = new YT.Player('player3', {
@@ -52,7 +54,8 @@
                 videoId: '',
                 playerVars: { 'autoplay': 0 },
                 events: {
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onReady': onPlayerReady
                 }
             });
             player4 = new YT.Player('player4', {
@@ -61,7 +64,8 @@
                 videoId: '',
                 playerVars: { 'autoplay': 0 },
                 events: {
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onReady': onPlayerReady
                 }
             });
             player5 = new YT.Player('player5', {
@@ -70,7 +74,8 @@
                 videoId: '',
                 playerVars: { 'autoplay': 0 },
                 events: {
-                    'onStateChange': onPlayerStateChange
+                    'onStateChange': onPlayerStateChange,
+                    'onReady': onPlayerReady
                 }
             });
         }
@@ -79,6 +84,10 @@
             if (event.data == YT.PlayerState.PLAYING) {
                 stopVideo(event.target.a.id);
             }
+        }
+
+        function onPlayerReady(event) {
+            event.target.setPlaybackQuality('small');
         }
 
         function stopVideo(player_id) {

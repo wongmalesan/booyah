@@ -4,33 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booyah</title>
+    <title>Dynamic YouTube Players</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 
 <body>
     <div>
-        <input type="text" id="txt_ytUri" name="txt_ytUri" placeholder="Enter YouTube video ID" value="caMBwGJERWo" />
-        <input type="button" value="OK" onClick="onGetURL()" />
-        <input type="button" value="Play" onClick="playAllWithDelay()" />
+        <label for="numPlayers">Number of Players:</label>
+        <input type="number" id="numPlayers" placeholder="Enter number of players" value="2">
+        <button onclick="generatePlayers()">Generate Players</button>
     </div>
+
+    <div id="players"></div>
+
     <div>
-        <div>Generate URL</div>
-        <input type="button" id="generateURL" value="Generate URL" onClick="onGenerateURL()" />
-        <select id="time_selected">
-            <option value='1_hour'>1 Jam</option>
-            <option value='30_min'>30 Menit</option>
-        </select>
-        <input type="text" id="generated_url" style="width: 100%;">
-        <input type="button" id="open_url" value="Open Link" onClick="onOpenLink()"></button>
+        <label for="delayInput">Set delay between videos (minutes):</label>
+        <input type="number" id="delayInput" placeholder="Enter delay in seconds" value="5">
+        <button onclick="playVideosWithDelay()">Play Videos</button>
     </div>
-    <div id="player1"></div>
-    <div id="player2"></div>
-    <div id="player3"></div>
-    <div id="player4"></div>
-    <div id="player5"></div>
+
     <script>
-        var player1, player2, player3, player4, player5;
+        var players = {};
 
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -38,172 +32,198 @@
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         function onYouTubeIframeAPIReady() {
-            player1 = new YT.Player('player1', {
-                height: '113',
-                width: '200',
-                videoId: '',
-                playerVars: { 'autoplay': 0 },
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                    'onReady': onPlayerReady
-                }
+            // YouTube IFrame API Ready Callback
+        }
+
+        function generatePlayers() {
+            const numPlayers = parseInt(document.getElementById("numPlayers").value) || 0;
+            const playersContainer = document.getElementById("players");
+            playersContainer.innerHTML = ""; // Clear existing players
+            players = {}; // Reset players object
+
+            for (let i = 1; i <= numPlayers; i++) {
+                const playerDivId = `player${i}`;
+
+                // Create player container
+                const playerContainer = document.createElement("div");
+                playerContainer.classList.add("player-container");
+
+                // Create player iframe div
+                const playerDiv = document.createElement("div");
+                playerDiv.id = playerDivId;
+                playerContainer.appendChild(playerDiv);
+
+                // Create input for YouTube video ID
+                const input = document.createElement("input");
+                input.type = "text";
+                input.id = `txt_ytUri_${playerDivId}`;
+                input.placeholder = "Enter YouTube video ID";
+                playerContainer.appendChild(input);
+
+                // Create generate URL section
+                const generateLabel = document.createElement("div");
+                generateLabel.textContent = "Generate URL";
+                playerContainer.appendChild(generateLabel);
+
+                const select = document.createElement("select");
+                select.id = `time_selected_${playerDivId}`;
+
+                const option1 = document.createElement("option");
+                option1.value = "1_hour";
+                option1.textContent = "1 Jam";
+                select.appendChild(option1);
+
+                const option2 = document.createElement("option");
+                option2.value = "30_min";
+                option2.textContent = "30 Menit";
+                select.appendChild(option2);
+
+                playerContainer.appendChild(select);
+
+                const urlInput = document.createElement("input");
+                urlInput.type = "text";
+                urlInput.id = `generated_url_${playerDivId}`;
+                urlInput.style.width = "100%";
+                urlInput.readOnly = true;
+                playerContainer.appendChild(urlInput);
+
+                const generateButton = document.createElement("button");
+                generateButton.textContent = "Generate URL";
+                generateButton.onclick = () => onGenerateURL(playerDivId);
+                playerContainer.appendChild(generateButton);
+
+                const videoLength = document.createElement("div");
+                videoLength.id = `video_length_${playerDivId}`;
+                videoLength.textContent = "Video length: N/A";
+                playerContainer.appendChild(videoLength);
+
+                // Append player container to main container
+                playersContainer.appendChild(playerContainer);
+
+                // Initialize YouTube player
+                players[playerDivId] = new YT.Player(playerDivId, {
+                    height: "226",
+                    width: "400",
+                    videoId: "",
+                    playerVars: {
+                        autoplay: 0,
+                        vq: "small" // Set to the lowest quality (144p)
+                    },
+                    events: {
+                        onReady: () => onPlayerReady(playerDivId),
+                    },
+                });
+            }
+        }
+
+        function onPlayerReady(playerId) {
+            const videoId = document.getElementById(`txt_ytUri_${playerId}`).value;
+            if (videoId) {
+                fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=YOUR_API_KEY`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.items && data.items.length > 0) {
+                            const duration = data.items[0].contentDetails.duration;
+                            document.getElementById(`video_length_${playerId}`).textContent = `Video length: ${duration}`;
+                        }
+                    });
+            }
+        }
+
+        function onGenerateURL(playerId) {
+            const videoId = document.getElementById(`txt_ytUri_${playerId}`).value;
+            const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
+
+            const end = selectedTime === "1_hour" ? 3600 : 1800; // 1 hour or 30 minutes
+
+            const url = `https://www.youtube.com/embed/${videoId}?start=0&end=${end}`;
+
+            document.getElementById(`generated_url_${playerId}`).value = url;
+
+            if (players[playerId]) {
+                players[playerId].cueVideoById(videoId);
+            }
+
+            fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=YOUR_API_KEY`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.items && data.items.length > 0) {
+                        const duration = data.items[0].contentDetails.duration;
+                        document.getElementById(`video_length_${playerId}`).textContent = `Video length: ${duration}`;
+                    }
+                });
+        }
+
+        function playVideosWithDelay() {
+            const delay = parseInt(document.getElementById("delayInput").value) * 60000 || 300000; // Default to 5 minutes (300000ms) if invalid
+
+            const playOrder = Object.keys(players);
+
+            playOrder.forEach((playerId, index) => {
+                setTimeout(() => {
+                    if (players[playerId]) {
+                        const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
+
+                        // Convert selected time to milliseconds
+                        const baseTime = selectedTime === "1_hour" ? 3600000 : 1800000; // 1 hour or 30 minutes in ms
+                        const randomTime = Math.floor(Math.random() * 5 + 1) * 60000; // Random 1 to 5 minutes in ms
+                        const totalTime = baseTime + randomTime;
+
+                        console.log(`Playing ${playerId} for ${totalTime / 60000} minutes`);
+                        // Start playing the video
+                        players[playerId].playVideo();
+
+                        // Stop the video after the calculated time
+                        setTimeout(() => {
+                            // players[playerId].stopVideo();
+                            players[playerId].pauseVideo();
+                            console.log(`Stopped ${playerId} after ${totalTime / 60000} minutes`);
+                        }, totalTime);
+                    }
+                }, index === 0 ? 0 : delay * index);
             });
-            player2 = new YT.Player('player2', {
-                height: '113',
-                width: '200',
-                videoId: '',
-                playerVars: { 'autoplay': 0 },
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                    'onReady': onPlayerReady
+        }
+
+        function playVideosSequentially() {
+            const playOrder = Object.keys(players); // Get the player IDs
+
+            function playNext(index) {
+                if (index >= playOrder.length) {
+                    console.log("All videos played and paused.");
+                    return; // Exit if no more videos to play
                 }
-            });
-            player3 = new YT.Player('player3', {
-                height: '113',
-                width: '200',
-                videoId: '',
-                playerVars: { 'autoplay': 0 },
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                    'onReady': onPlayerReady
-                }
-            });
-            player4 = new YT.Player('player4', {
-                height: '113',
-                width: '200',
-                videoId: '',
-                playerVars: { 'autoplay': 0 },
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                    'onReady': onPlayerReady
-                }
-            });
-            player5 = new YT.Player('player5', {
-                height: '113',
-                width: '200',
-                videoId: '',
-                playerVars: { 'autoplay': 0 },
-                events: {
-                    'onStateChange': onPlayerStateChange,
-                    'onReady': onPlayerReady
-                }
-            });
-        }
 
-        function onPlayerStateChange(event) {
-            if (event.data == YT.PlayerState.PLAYING) {
-                stopVideo(event.target.a.id);
-            }
-        }
+                const playerId = playOrder[index];
+                const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
 
-        function onPlayerReady(event) {
-            event.target.setPlaybackQuality('small');
-        }
+                // Convert selected time to milliseconds
+                const baseTime = selectedTime === "1_hour" ? 3600000 : 1800000; // 1 hour or 30 minutes in ms
+                const randomTime = Math.floor(Math.random() * 5 + 1) * 60000; // Random 1 to 5 minutes in ms
+                const totalTime = baseTime + randomTime;
 
-        function stopVideo(player_id) {
-            switch (player_id) {
-                case "player1":
-                    player2.stopVideo();
-                    player3.stopVideo();
-                    player4.stopVideo();
-                    player5.stopVideo();
-                    break;
-                case "player2":
-                    player1.stopVideo();
-                    player3.stopVideo();
-                    player4.stopVideo();
-                    player5.stopVideo();
-                    break;
-                case "player3":
-                    player1.stopVideo();
-                    player2.stopVideo();
-                    player4.stopVideo();
-                    player5.stopVideo();
-                    break;
-                case "player4":
-                    player1.stopVideo();
-                    player2.stopVideo();
-                    player3.stopVideo();
-                    player5.stopVideo();
-                    break;
-                case "player5":
-                    player1.stopVideo();
-                    player2.stopVideo();
-                    player3.stopVideo();
-                    player4.stopVideo();
-                    break;
-            }
-        }
+                console.log(`Playing ${playerId} for ${totalTime / 60000} minutes`);
 
-        function onGetURL() {
-            var videoId = document.getElementById('txt_ytUri').value;
-            player1.cueVideoById(videoId);
-            player2.cueVideoById(videoId);
-            player3.cueVideoById(videoId);
-            player4.cueVideoById(videoId);
-            player5.cueVideoById(videoId);
-        }
+                // Start playing the current video
+                players[playerId].playVideo();
 
-        function getRandomDelay(minMinutes, maxMinutes) {
-            // Konversi menit ke milidetik
-            const minMs = minMinutes * 60 * 1000;
-            const maxMs = maxMinutes * 60 * 1000;
+                // Pause the video after the calculated time
+                setTimeout(() => {
+                    players[playerId].pauseVideo();
+                    console.log(`Paused ${playerId} after ${totalTime / 60000} minutes`);
 
-            // Hasilkan nilai acak dalam rentang milidetik yang diinginkan
-            return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-        }
+                    // Calculate delay (totalTime + 1 minute) before starting the next video
+                    const delay = totalTime + 60000;
 
-        function onGenerateURL() {
-
-            function getAdditionalMinuts(min, max) {
-                return Math.floor(Math.random() * (max - min + 1)) + min;
+                    // Start the next video after the delay
+                    setTimeout(() => {
+                        playNext(index + 1); // Play the next video
+                    }, delay);
+                }, totalTime);
             }
 
-            function getAdditionalSecond(min, max) {
-                var minSeconds = min * 60;
-                var maxSeconds = max * 60;
-                return Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds;
-            }
-            
-            var videoId = document.getElementById('txt_ytUri').value;
-            var selectedTime = document.getElementById('time_selected').value;
-            var randomMinutes = getAdditionalMinuts(1, 3);
-            var randomSecond = getAdditionalSecond(1, 5);
-
-            console.log(randomSecond);
-            var start = 0;
-            var end = 0;
-
-            if (selectedTime == '1_hour') {
-                end = (60 * 60) + getAdditionalSecond(1,3);
-            }
-
-            if (selectedTime == '30_min') {
-                end = (30 * 60) + getAdditionalSecond(1,3);;
-            }
-            var url = "https://www.youtube.com/embed/" + videoId + "?start=" + start + "&end=" + end;
-
-            document.getElementById('generated_url').value = url;
+            playNext(0); // Start with the first video
         }
 
-        function onOpenLink(){
-            var generatedURL = document.getElementById('generated_url').value;
-            if (generatedURL) {
-                window.open(generatedURL, '_blank');
-            }
-        }
-
-        function playAllWithDelay() {
-            setTimeout(function () { player1.playVideo(); }, 0);
-            setTimeout(function () { player2.playVideo(); }, getRandomDelay(15, 20));
-            setTimeout(function () { player3.playVideo(); }, getRandomDelay(25, 30));
-            setTimeout(function () { player4.playVideo(); }, getRandomDelay(35, 40));
-            setTimeout(function () { player5.playVideo(); }, getRandomDelay(50, 60));
-        }
-
-        $(document).ready(function () {
-            console.log("ready!");
-        });
     </script>
 </body>
 

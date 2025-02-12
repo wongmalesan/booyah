@@ -19,7 +19,7 @@
 
     <div>
         <label for="delayInput">Set delay between videos (minutes):</label>
-        <input type="number" id="delayInput" placeholder="Enter delay in seconds" value="5">
+        <input type="number" id="delayInput" placeholder="Enter delay in minutes" value="5">
         <button onclick="playVideosWithDelay()">Play Videos</button>
     </div>
 
@@ -60,6 +60,13 @@
                 input.placeholder = "Enter YouTube video ID";
                 playerContainer.appendChild(input);
 
+                // Create input for custom start time
+                const customStartInput = document.createElement("input");
+                customStartInput.type = "number";
+                customStartInput.id = `custom_start_${playerDivId}`;
+                customStartInput.placeholder = "Enter custom start time (in seconds)";
+                playerContainer.appendChild(customStartInput);
+
                 // Create generate URL section
                 const generateLabel = document.createElement("div");
                 generateLabel.textContent = "Generate URL";
@@ -70,12 +77,12 @@
 
                 const option1 = document.createElement("option");
                 option1.value = "1_hour";
-                option1.textContent = "1 Jam";
+                option1.textContent = "1 Hour";
                 select.appendChild(option1);
 
                 const option2 = document.createElement("option");
                 option2.value = "30_min";
-                option2.textContent = "30 Menit";
+                option2.textContent = "30 Minutes";
                 select.appendChild(option2);
 
                 playerContainer.appendChild(select);
@@ -84,7 +91,6 @@
                 urlInput.type = "text";
                 urlInput.id = `generated_url_${playerDivId}`;
                 urlInput.style.width = "100%";
-                urlInput.readOnly = true;
                 playerContainer.appendChild(urlInput);
 
                 const generateButton = document.createElement("button");
@@ -108,122 +114,55 @@
                     playerVars: {
                         autoplay: 0,
                         vq: "small" // Set to the lowest quality (144p)
-                    },
-                    events: {
-                        onReady: () => onPlayerReady(playerDivId),
-                    },
+                    }
                 });
-            }
-        }
-
-        function onPlayerReady(playerId) {
-            const videoId = document.getElementById(`txt_ytUri_${playerId}`).value;
-            if (videoId) {
-                fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=YOUR_API_KEY`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.items && data.items.length > 0) {
-                            const duration = data.items[0].contentDetails.duration;
-                            document.getElementById(`video_length_${playerId}`).textContent = `Video length: ${duration}`;
-                        }
-                    });
             }
         }
 
         function onGenerateURL(playerId) {
             const videoId = document.getElementById(`txt_ytUri_${playerId}`).value;
             const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
+            const customStartTime = parseInt(document.getElementById(`custom_start_${playerId}`).value) || 0;
 
-            const end = selectedTime === "1_hour" ? 3600 : 1800; // 1 hour or 30 minutes
-
-            const url = `https://www.youtube.com/embed/${videoId}?start=0&end=${end}`;
-
-            document.getElementById(`generated_url_${playerId}`).value = url;
-
-            if (players[playerId]) {
-                players[playerId].cueVideoById(videoId);
+            let endTime;
+            if (selectedTime === "1_hour") {
+                endTime = customStartTime + 3600; // 1 hour duration
+            } else if (selectedTime === "30_min") {
+                endTime = customStartTime + 1800; // 30 minutes duration
             }
 
-            fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=YOUR_API_KEY`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.items && data.items.length > 0) {
-                        const duration = data.items[0].contentDetails.duration;
-                        document.getElementById(`video_length_${playerId}`).textContent = `Video length: ${duration}`;
-                    }
+            const url = `https://www.youtube.com/embed/${videoId}?start=${customStartTime}&end=${endTime}`;
+            document.getElementById(`generated_url_${playerId}`).value = url;
+
+            if (players[playerId] && players[playerId].getPlayerState() !== -1) { // Ensure the player is ready
+                players[playerId].cueVideoById({
+                    videoId: videoId,
+                    startSeconds: customStartTime,
+                    endSeconds: endTime,
+                    suggestedQuality: "small"
                 });
+
+                setTimeout(() => {
+                    players[playerId].playVideo();
+                    console.log(`Playing ${playerId} from ${customStartTime} to ${endTime}`);
+                }, 1000); // Delay to ensure the video cues correctly
+            }
         }
 
         function playVideosWithDelay() {
-            const delay = parseInt(document.getElementById("delayInput").value) * 60000 || 300000; // Default to 5 minutes (300000ms) if invalid
+            const delay = parseInt(document.getElementById("delayInput").value) * 60000 || 300000; // Default to 5 minutes
 
             const playOrder = Object.keys(players);
 
             playOrder.forEach((playerId, index) => {
                 setTimeout(() => {
                     if (players[playerId]) {
-                        const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
-
-                        // Convert selected time to milliseconds
-                        const baseTime = selectedTime === "1_hour" ? 3600000 : 1800000; // 1 hour or 30 minutes in ms
-                        const randomTime = Math.floor(Math.random() * 5 + 1) * 60000; // Random 1 to 5 minutes in ms
-                        const totalTime = baseTime + randomTime;
-
-                        console.log(`Playing ${playerId} for ${totalTime / 60000} minutes`);
-                        // Start playing the video
                         players[playerId].playVideo();
-
-                        // Stop the video after the calculated time
-                        setTimeout(() => {
-                            // players[playerId].stopVideo();
-                            players[playerId].pauseVideo();
-                            console.log(`Stopped ${playerId} after ${totalTime / 60000} minutes`);
-                        }, totalTime);
+                        console.log(`Playing ${playerId}`);
                     }
-                }, index === 0 ? 0 : delay * index);
+                }, index * delay);
             });
         }
-
-        function playVideosSequentially() {
-            const playOrder = Object.keys(players); // Get the player IDs
-
-            function playNext(index) {
-                if (index >= playOrder.length) {
-                    console.log("All videos played and paused.");
-                    return; // Exit if no more videos to play
-                }
-
-                const playerId = playOrder[index];
-                const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
-
-                // Convert selected time to milliseconds
-                const baseTime = selectedTime === "1_hour" ? 3600000 : 1800000; // 1 hour or 30 minutes in ms
-                const randomTime = Math.floor(Math.random() * 5 + 1) * 60000; // Random 1 to 5 minutes in ms
-                const totalTime = baseTime + randomTime;
-
-                console.log(`Playing ${playerId} for ${totalTime / 60000} minutes`);
-
-                // Start playing the current video
-                players[playerId].playVideo();
-
-                // Pause the video after the calculated time
-                setTimeout(() => {
-                    players[playerId].pauseVideo();
-                    console.log(`Paused ${playerId} after ${totalTime / 60000} minutes`);
-
-                    // Calculate delay (totalTime + 1 minute) before starting the next video
-                    const delay = totalTime + 60000;
-
-                    // Start the next video after the delay
-                    setTimeout(() => {
-                        playNext(index + 1); // Play the next video
-                    }, delay);
-                }, totalTime);
-            }
-
-            playNext(0); // Start with the first video
-        }
-
     </script>
 </body>
 

@@ -1,169 +1,143 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic YouTube Players</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Simple Drive Player</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: #111;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 10px;
+        }
+
+        .player-wrap {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            /* 16:9 */
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .player-wrap iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #2b7cff;
+            color: #fff;
+        }
+
+        .playlist {
+            margin-top: 15px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .item {
+            padding: 10px;
+            background: #1b1b1b;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .item:hover {
+            background: #333;
+        }
+
+        .item.active {
+            background: #2b7cff;
+        }
+    </style>
 </head>
 
 <body>
-    <div>
-        <label for="numPlayers">Number of Players:</label>
-        <input type="number" id="numPlayers" placeholder="Enter number of players" value="2">
-        <button onclick="generatePlayers()">Generate Players</button>
-    </div>
 
-    <div id="players"></div>
+    <div class="container">
 
-    <div>
-        <label for="delayInput">Set delay between videos (minutes):</label>
-        <input type="number" id="delayInput" placeholder="Enter delay in minutes" value="5">
-        <button onclick="playVideosWithDelay()">Play Videos</button>
+
+        <h3>My Video Player</h3>
+
+        <div class="player-wrap">
+            <iframe id="player" src="https://drive.google.com/file/d/1F5WnQF6fJayY25BssZenNBNr0PfIJv9V/preview"
+                allow="autoplay; fullscreen" allowfullscreen>
+            </iframe>
+        </div>
+
+        <div class="controls">
+            <button onclick="fullscreen()">Fullscreen</button>
+        </div>
+
+        <div class="playlist" id="playlist"></div>
     </div>
 
     <script>
-        var players = {};
+        const playlist = document.getElementById("playlist");
+        const playerWrap = document.querySelector(".player-wrap");
+        const player = document.getElementById("player");
 
-        var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        const videos = [
+            {title : "Episode 9", url : "https://drive.google.com/file/d/1F5WnQF6fJayY25BssZenNBNr0PfIJv9V/preview"},
+            {title : "Episode 10", url : "https://drive.google.com/file/d/1G23PHCqA4NaMfpkDH5xtEMrzInN6PeaQ/preview"},
+            {title : "Episode 11", url : "https://drive.google.com/file/d/17sazF1TG6gy6CLY3P7_YV8Q0_ElDwFhi/preview"},
+            {title : "Episode 12", url : "https://drive.google.com/file/d/1dEDwywsvBCu5f0_ikWPmfgyPaerLCuy6/preview"},
+        ];
 
-        function onYouTubeIframeAPIReady() {
-            // YouTube IFrame API Ready Callback
+        /* render playlist */
+        videos.forEach((v, i) => {
+            const div = document.createElement("div");
+            div.className = "item";
+            div.innerText = v.title;
+
+            div.onclick = () => changeVideo(v.url, div);
+
+            playlist.appendChild(div);
+
+            if (i === 0) {
+                div.classList.add("active");
+            }
+        });
+
+        function changeVideo(url, el) {
+            player.src = url;
+
+            document.querySelectorAll(".item").forEach(i => i.classList.remove("active"));
+            el.classList.add("active");
         }
 
-        function generatePlayers() {
-            const numPlayers = parseInt(document.getElementById("numPlayers").value) || 0;
-            const playersContainer = document.getElementById("players");
-            playersContainer.innerHTML = ""; // Clear existing players
-            players = {}; // Reset players object
-
-            for (let i = 1; i <= numPlayers; i++) {
-                const playerDivId = `player${i}`;
-
-                // Create player container
-                const playerContainer = document.createElement("div");
-                playerContainer.classList.add("player-container");
-
-                // Create player iframe div
-                const playerDiv = document.createElement("div");
-                playerDiv.id = playerDivId;
-                playerContainer.appendChild(playerDiv);
-
-                // Create input for YouTube video ID
-                const input = document.createElement("input");
-                input.type = "text";
-                input.id = `txt_ytUri_${playerDivId}`;
-                input.placeholder = "Enter YouTube video ID";
-                playerContainer.appendChild(input);
-
-                // Create input for custom start time
-                const customStartInput = document.createElement("input");
-                customStartInput.type = "number";
-                customStartInput.id = `custom_start_${playerDivId}`;
-                customStartInput.placeholder = "Enter custom start time (in seconds)";
-                playerContainer.appendChild(customStartInput);
-
-                // Create generate URL section
-                const generateLabel = document.createElement("div");
-                generateLabel.textContent = "Generate URL";
-                playerContainer.appendChild(generateLabel);
-
-                const select = document.createElement("select");
-                select.id = `time_selected_${playerDivId}`;
-
-                const option1 = document.createElement("option");
-                option1.value = "1_hour";
-                option1.textContent = "1 Hour";
-                select.appendChild(option1);
-
-                const option2 = document.createElement("option");
-                option2.value = "30_min";
-                option2.textContent = "30 Minutes";
-                select.appendChild(option2);
-
-                playerContainer.appendChild(select);
-
-                const urlInput = document.createElement("input");
-                urlInput.type = "text";
-                urlInput.id = `generated_url_${playerDivId}`;
-                urlInput.style.width = "100%";
-                playerContainer.appendChild(urlInput);
-
-                const generateButton = document.createElement("button");
-                generateButton.textContent = "Generate URL";
-                generateButton.onclick = () => onGenerateURL(playerDivId);
-                playerContainer.appendChild(generateButton);
-
-                const videoLength = document.createElement("div");
-                videoLength.id = `video_length_${playerDivId}`;
-                videoLength.textContent = "Video length: N/A";
-                playerContainer.appendChild(videoLength);
-
-                // Append player container to main container
-                playersContainer.appendChild(playerContainer);
-
-                // Initialize YouTube player
-                players[playerDivId] = new YT.Player(playerDivId, {
-                    height: "226",
-                    width: "400",
-                    videoId: "",
-                    playerVars: {
-                        autoplay: 0,
-                        vq: "small" // Set to the lowest quality (144p)
-                    }
-                });
+        /* fullscreen wrapper (lebih smooth) */
+        function fullscreen() {
+            if (playerWrap.requestFullscreen) {
+                playerWrap.requestFullscreen();
             }
-        }
-
-        function onGenerateURL(playerId) {
-            const videoId = document.getElementById(`txt_ytUri_${playerId}`).value;
-            const selectedTime = document.getElementById(`time_selected_${playerId}`).value;
-            const customStartTime = parseInt(document.getElementById(`custom_start_${playerId}`).value) || 0;
-
-            let endTime;
-            if (selectedTime === "1_hour") {
-                endTime = customStartTime + 3600; // 1 hour duration
-            } else if (selectedTime === "30_min") {
-                endTime = customStartTime + 1800; // 30 minutes duration
-            }
-
-            const url = `https://www.youtube.com/embed/${videoId}?start=${customStartTime}&end=${endTime}`;
-            document.getElementById(`generated_url_${playerId}`).value = url;
-
-            if (players[playerId] && players[playerId].getPlayerState() !== -1) { // Ensure the player is ready
-                players[playerId].cueVideoById({
-                    videoId: videoId,
-                    startSeconds: customStartTime,
-                    endSeconds: endTime,
-                    suggestedQuality: "small"
-                });
-
-                setTimeout(() => {
-                    players[playerId].playVideo();
-                    console.log(`Playing ${playerId} from ${customStartTime} to ${endTime}`);
-                }, 1000); // Delay to ensure the video cues correctly
-            }
-        }
-
-        function playVideosWithDelay() {
-            const delay = parseInt(document.getElementById("delayInput").value) * 60000 || 300000; // Default to 5 minutes
-
-            const playOrder = Object.keys(players);
-
-            playOrder.forEach((playerId, index) => {
-                setTimeout(() => {
-                    if (players[playerId]) {
-                        players[playerId].playVideo();
-                        console.log(`Playing ${playerId}`);
-                    }
-                }, index * delay);
-            });
         }
     </script>
+
 </body>
 
 </html>
